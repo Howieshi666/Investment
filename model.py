@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 w.start()
 
@@ -256,9 +257,44 @@ def calc_SMA(codes):
     sec_close.dropna(how='all', inplace=True)
     sma_short = sec_close.rolling(window=42).mean()  # 短期
     sma_long = sec_close.rolling(window=252).mean()  # 长期
-    sma_short.plot()
-    sma_long.plot()
-    sec_close.plot()  # todo:分别画在n张图中
+    positions = pd.DataFrame(np.where(sma_short > sma_long, 1, -1), columns=sma_short.columns, index=sma_short.index)
+    # 将所有数据框的列按照名称进行匹配，存储在一个字典中
+    col_dict = {}
+    for col_name in sec_close.columns:
+        col_dict[col_name] = [sec_close[col_name], sma_short[col_name], sma_long[col_name], positions[col_name]]
+
+    # 创建子图
+    n_cols = 1
+    n_rows = len(col_dict)
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(10, 8))
+    axes = axes.flatten()
+
+    # 循环添加数据
+    for i, (name, cols) in enumerate(col_dict.items()):
+        for j, col in enumerate(cols):
+            # 创建子图
+            ax = axes[i]
+            if j == len(cols) - 1:
+                # 创建第二个y轴
+                ax2 = ax.twinx()
+                ax2.plot(col, label=name, color='tab:orange')
+                ax2.set_ylabel('df3 ' + name, color='tab:orange')
+                ax2.tick_params(axis='y', labelcolor='tab:orange')
+            else:
+                ax.plot(col, label=name)
+
+        ax.set_title(name)
+        ax.set_xlabel('Index')
+        ax.set_ylabel(name)
+
+    # 添加图例
+    fig.legend(labels=['sec_close', 'sma_short', 'sma_long', 'positions'], loc='lower right')
+
+    # 调整子图间距
+    fig.tight_layout(pad=3.0)
+
+    # 显示图形
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -267,6 +303,7 @@ if __name__ == '__main__':
     stock_select = stock_profit(market)
     stock_buy, ten_rate, market_pe = good_price(stock_select, market)
     stock_sell = sell_stock(['002677.SZ'], ten_rate, market_pe, market)
+    calc_SMA(stock_buy)
 
     market = '港股'
     stock_select = stock_profit(market)
